@@ -39,6 +39,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data")
     ap.add_argument("--out", default="models")
+    ap.add_argument("--no-baseline", action="store_true",
+                    help="skip the flat 150-class comparison model (saves time and memory, e.g. in Docker)")
     args = ap.parse_args()
 
     train_rows, val_rows, test_rows, intent_to_domain = load(Path(args.data))
@@ -60,13 +62,13 @@ def main() -> None:
     meta_path.write_text(json.dumps(meta, indent=2))
     print(f"threshold={best:.2f}")
 
-    # Flat single-model baseline for comparison.
-    flat = build_pipeline().fit([t for t, _ in train_rows], [i for _, i in train_rows])
-    gold_in = [(t, i) for t, i in test_rows if i != OUT_OF_SCOPE]
-    flat_acc = accuracy_score([i for _, i in gold_in], flat.predict([t for t, _ in gold_in]))
-
     results = evaluate(clf, test_rows)
-    results["flat_baseline_in_scope_accuracy"] = flat_acc
+    if not args.no_baseline:
+        # Flat single-model baseline for comparison.
+        flat = build_pipeline().fit([t for t, _ in train_rows], [i for _, i in train_rows])
+        gold_in = [(t, i) for t, i in test_rows if i != OUT_OF_SCOPE]
+        results["flat_baseline_in_scope_accuracy"] = accuracy_score(
+            [i for _, i in gold_in], flat.predict([t for t, _ in gold_in]))
     results = {k: round(v, 4) if isinstance(v, float) else v for k, v in results.items()}
     (Path(args.out) / "results.json").write_text(json.dumps(results, indent=2))
     print(json.dumps(results, indent=2))

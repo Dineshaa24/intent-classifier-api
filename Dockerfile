@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY scripts ./scripts
-RUN python -m scripts.download_data && python -m scripts.train
+RUN python -m scripts.download_data && python -m scripts.train --no-baseline
 
 RUN useradd --create-home appuser
 USER appuser
